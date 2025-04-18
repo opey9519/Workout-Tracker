@@ -3,7 +3,10 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
+from datetime import datetime
+import pytz
 
+est_timezone = pytz.timezone('US/Eastern')
 app = Flask(__name__)
 
 db = SQLAlchemy(app)
@@ -15,10 +18,15 @@ CORS(app)
 
 
 class User(db.Model):
+    __tablename__ = 'users'
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    _password_hashed = db.Column(db.String(60))
+    _password_hashed = db.Column(db.String(60), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(est_timezone))
+
+    workouts = db.relationship('Workout', backref='user')
 
     @property
     def password(self):
@@ -35,23 +43,44 @@ class User(db.Model):
     def __repr__(self):
         return f'<User: {self.username}>'
 
-    # Table to store list of exercises
 
+# Table to store list of exercises
+class Exercise(db.Model):
+    __tablename__ = 'exercises'
 
-class Exercises(db.Model):
-    pass
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(60), unique=True, nullable=False)
+    description = db.Column(db.String(200))
+    muscle_group = db.Column(db.String(60), nullable=False)
+
+    workout_exercises = db.relationship('WorkoutExercise', backref='exercise')
 
 # Table to store User's workouts
 
 
-class Workouts(db.Model):
-    pass
+class Workout(db.Model):
+    __tablename__ = 'workouts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    scheduled_time = db.Column(db.DateTime, default=datetime.now(est_timezone))
+    completed = db.Column(db.Boolean, nullable=False)
+    notes = db.Column(db.String(200))
+
+    workout_exercises = db.relationship('WorkoutExercise', backref='workout')
 
 # Table to store details about workouts
 
 
-class Workout_Exercises(db.Model):
-    pass
+class WorkoutExercise(db.Model):
+    __tablename__ = 'workout_exercises'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workout_id = db.Column(db.Integer, db.ForeignKey('workouts.id'))
+    exercise_id = db.Column(db.Integer, db.ForeignKey('exercises.id'))
+    sets = db.Column(db.Integer, nullable=False)
+    reps = db.Column(db.Integer, nullable=False)
+    weight = db.Column(db.Float)
 
 
 if __name__ == '__main__':
