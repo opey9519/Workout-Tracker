@@ -1,18 +1,29 @@
+# Dependency Libraries
 from flask import Flask, request
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from datetime import datetime
+from dotenv import load_dotenv
 import pytz
+
+# Dependency Files/Var
+from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
+
+load_dotenv()
 
 est_timezone = pytz.timezone('US/Eastern')
 app = Flask(__name__)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = SQLALCHEMY_TRACK_MODIFICATIONS
 
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
 CORS(app)
+
 
 # Table to store User data
 
@@ -32,7 +43,7 @@ class User(db.Model):
     def password(self):
         raise AttributeError('Password field is write-only')
 
-    @property.setter
+    @password.setter
     def password(self, password):
         self._password_hashed = bcrypt.generate_password_hash(
             password).decode('utf-8')
@@ -81,6 +92,11 @@ class WorkoutExercise(db.Model):
     sets = db.Column(db.Integer, nullable=False)
     reps = db.Column(db.Integer, nullable=False)
     weight = db.Column(db.Float)
+
+
+@app.route('/test_db')
+def test_db():
+    pass
 
 
 if __name__ == '__main__':
