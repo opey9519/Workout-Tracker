@@ -2,6 +2,7 @@
 from flask import Flask, request
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from datetime import datetime
@@ -93,10 +94,16 @@ class WorkoutExercise(db.Model):
     reps = db.Column(db.Integer, nullable=False)
     weight = db.Column(db.Float)
 
+# Test database connection
+
 
 @app.route('/test_db')
 def test_db():
-    pass
+    try:
+        db.session.execute(text("SELECT 1"))
+        return {'message': 'Connected to PostgreSQL successfuly!'}
+    except Exception as e:
+        return {'error': str(e)}
 
 
 if __name__ == '__main__':
