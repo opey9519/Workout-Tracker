@@ -1,5 +1,5 @@
 # Dependency Libraries
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
@@ -97,14 +97,41 @@ class WorkoutExercise(db.Model):
 # Test database connection
 
 
-@app.route('/test_db')
-def test_db():
-    try:
-        db.session.execute(text("SELECT 1"))
-        return {'message': 'Connected to PostgreSQL successfuly!'}
-    except Exception as e:
-        return {'error': str(e)}
+# @app.route('/test_db')
+# def test_db():
+#     try:
+#         db.session.execute(text("SELECT 1"))
+#         return {'message': 'Connected to PostgreSQL successfuly!'}
+#     except Exception as e:
+#         return {'error': str(e)}
+
+
+# Sign up endpoint
+@app.route('/signup', methods=['POST'])
+def signUp():
+    data = request.get_json()
+    username = data.get('username')
+    email = data.get('email')
+
+    existing_user = User.query.filter(
+        (User.username == username) | (User.email == email)).first()
+
+    if existing_user:
+        return jsonify({'message': 'User already exists'}), 409
+
+    new_user = User(
+        username=username,
+        email=email
+    )
+    new_user.password = data.get('password')  # Calls setter to hash password
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({'message': 'User successfully created'}), 201
 
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run()
