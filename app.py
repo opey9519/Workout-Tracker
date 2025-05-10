@@ -2,7 +2,6 @@
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from datetime import datetime
@@ -11,6 +10,7 @@ import pytz
 
 # Dependency Files/Var
 from config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
+from config import JWT_SECRET_KEY
 
 load_dotenv()
 
@@ -19,6 +19,7 @@ app = Flask(__name__)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = SQLALCHEMY_TRACK_MODIFICATIONS
+app.config["JWT_SECRET_KEY"] = JWT_SECRET_KEY
 
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
@@ -94,30 +95,21 @@ class WorkoutExercise(db.Model):
     reps = db.Column(db.Integer, nullable=False)
     weight = db.Column(db.Float)
 
-# Test database connection
-
-
-# @app.route('/test_db')
-# def test_db():
-#     try:
-#         db.session.execute(text("SELECT 1"))
-#         return {'message': 'Connected to PostgreSQL successfuly!'}
-#     except Exception as e:
-#         return {'error': str(e)}
-
-
 # Sign up endpoint
+
+
 @app.route('/signup', methods=['POST'])
 def signUp():
     data = request.get_json()
     username = data.get('username')
     email = data.get('email')
 
+    # Finds first existing username and email from JSON payload, if none - return none
     existing_user = User.query.filter(
         (User.username == username) | (User.email == email)).first()
 
     if existing_user:
-        return jsonify({'message': 'User already exists'}), 409
+        return jsonify({'message': 'User Already Exists'}), 409
 
     new_user = User(
         username=username,
@@ -128,7 +120,27 @@ def signUp():
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({'message': 'User successfully created'}), 201
+    return jsonify({'message': 'User Successfully Created'}), 201
+
+
+@app.route('/signin', methods=['POST'])
+def signIn():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({'message': 'Username and password are required'}), 400
+
+    # Finds first existing username and email from JSON payload, if none - return none
+    existing_user = User.query.filter_by(username=username).first()
+
+    if not existing_user or not existing_user.check_password(password):
+        return jsonify({'message': 'Invalid Credentials'}), 401
+
+    access_token = create_access_token(identity=existing_user.id)
+
+    return jsonify(access_token=access_token), 200
 
 
 if __name__ == '__main__':
